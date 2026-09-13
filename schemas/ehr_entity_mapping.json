@@ -1,0 +1,16 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "EhrEntityMapping",
+  "type": "object",
+  "properties": {
+    "mapping_id": { "type": "string", "format": "uuid" },
+    "tenant_id": { "type": "string", "format": "uuid" },
+    "connection_id": { "type": "string", "format": "uuid" },
+    "local_entity_type": { "type": "string", "enum": ["Patient", "Doctor", "Hospital", "Appointment", "TimeSlot"] },
+    "local_entity_id": { "type": "string", "format": "uuid" },
+    "remote_entity_type": { "type": "string" },
+    "remote_entity_id": { "type": "string" },
+    "created_at": { "type": "string", "format": "date-time" }
+  },
+  "required": ["mapping_id", "tenant_id", "connection_id", "local_entity_type", "local_entity_id", "remote_entity_type", "remote_entity_id"]
+}

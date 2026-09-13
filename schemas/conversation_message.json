@@ -1,0 +1,15 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ConversationMessage",
+  "type": "object",
+  "properties": {
+    "message_id": { "type": "string", "format": "uuid" },
+    "session_id": { "type": "string", "format": "uuid" },
+    "role": { "type": "string", "enum": ["User", "Assistant", "System", "Tool"] },
+    "content": { "type": "string" },
+    "tool_calls": { "type": ["array", "null"], "items": { "type": "object" } },
+    "intent_snapshot": { "type": ["object", "null"] },
+    "created_at": { "type": "string", "format": "date-time" }
+  },
+  "required": ["message_id", "session_id", "role", "content", "created_at"]
+}

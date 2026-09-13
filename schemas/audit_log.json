@@ -1,0 +1,18 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "AuditLog",
+  "type": "object",
+  "properties": {
+    "audit_id": { "type": "string", "format": "uuid" },
+    "tenant_id": { "type": "string", "format": "uuid" },
+    "actor_type": { "type": "string", "enum": ["AdminUser", "Patient", "System", "AIAgent", "EHR"] },
+    "actor_id": { "type": ["string", "null"] },
+    "action": { "type": "string" },
+    "entity_type": { "type": "string" },
+    "entity_id": { "type": ["string", "null"] },
+    "metadata": { "type": ["object", "null"] },
+    "ip_address": { "type": ["string", "null"] },
+    "created_at": { "type": "string", "format": "date-time" }
+  },
+  "required": ["audit_id", "tenant_id", "actor_type", "action", "entity_type", "created_at"]
+}

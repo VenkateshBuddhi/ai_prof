@@ -1,0 +1,22 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "TimeSlot",
+  "type": "object",
+  "properties": {
+    "slot_id": { "type": "string", "format": "uuid" },
+    "tenant_id": { "type": "string", "format": "uuid" },
+    "doctor_id": { "type": "string", "format": "uuid" },
+    "hospital_id": { "type": "string", "format": "uuid" },
+    "template_id": { "type": ["string", "null"], "format": "uuid" },
+    "start_time": { "type": "string", "format": "date-time" },
+    "end_time": { "type": "string", "format": "date-time" },
+    "appointment_type": { "type": ["string", "null"] },
+    "status": { "type": "string", "enum": ["Open", "Booked", "Held", "Blocked", "Cancelled", "Expired"] },
+    "hold_until": { "type": ["string", "null"], "format": "date-time" },
+    "hold_token": { "type": ["string", "null"], "format": "uuid" },
+    "row_version": { "type": "integer", "minimum": 0 },
+    "created_at": { "type": "string", "format": "date-time" },
+    "updated_at": { "type": "string", "format": "date-time" }
+  },
+  "required": ["slot_id", "tenant_id", "doctor_id", "hospital_id", "start_time", "end_time", "status", "row_version"]
+}

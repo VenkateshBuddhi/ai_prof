@@ -1,0 +1,21 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "EhrSyncLog",
+  "type": "object",
+  "properties": {
+    "sync_log_id": { "type": "string", "format": "uuid" },
+    "connection_id": { "type": "string", "format": "uuid" },
+    "mapping_id": { "type": ["string", "null"], "format": "uuid" },
+    "direction": { "type": "string", "enum": ["Outbound", "Inbound"] },
+    "entity_type": { "type": "string" },
+    "entity_id": { "type": "string", "format": "uuid" },
+    "operation": { "type": "string", "enum": ["Create", "Update", "Delete", "Verify"] },
+    "status": { "type": "string", "enum": ["Pending", "Success", "Failed", "Retrying"] },
+    "request_ref": { "type": ["string", "null"] },
+    "error_detail": { "type": ["string", "null"] },
+    "attempts": { "type": "integer", "minimum": 0 },
+    "created_at": { "type": "string", "format": "date-time" },
+    "completed_at": { "type": ["string", "null"], "format": "date-time" }
+  },
+  "required": ["sync_log_id", "connection_id", "direction", "entity_type", "entity_id", "operation", "status", "attempts"]
+}

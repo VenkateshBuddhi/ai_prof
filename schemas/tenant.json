@@ -1,0 +1,16 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Tenant",
+  "type": "object",
+  "properties": {
+    "tenant_id": { "type": "string", "format": "uuid" },
+    "name": { "type": "string" },
+    "slug": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+    "status": { "type": "string", "enum": ["Onboarding", "Active", "Suspended", "Closed"] },
+    "default_timezone": { "type": "string" },
+    "settings": { "type": "object" },
+    "created_at": { "type": "string", "format": "date-time" },
+    "updated_at": { "type": "string", "format": "date-time" }
+  },
+  "required": ["tenant_id", "name", "slug", "status"]
+}

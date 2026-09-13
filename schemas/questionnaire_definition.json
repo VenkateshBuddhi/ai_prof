@@ -1,0 +1,33 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "QuestionnaireDefinition",
+  "type": "object",
+  "properties": {
+    "questionnaire_id": { "type": "string", "format": "uuid" },
+    "doctor_id": { "type": "string", "format": "uuid" },
+    "title": { "type": "string" },
+    "specialty": { "type": "string" },
+    "version": { "type": "integer" },
+    "questions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "question_id": { "type": "string" },
+          "prompt_text": { "type": "string" },
+          "response_type": {
+            "type": "string",
+            "enum": ["Yes/No", "Multiple Choice", "Single Choice", "Numeric", "Date", "Short Text", "Long Text"]
+          },
+          "options": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "is_required": { "type": "boolean" }
+        },
+        "required": ["question_id", "prompt_text", "response_type"]
+      }
+    }
+  },
+  "required": ["questionnaire_id", "doctor_id", "title", "questions"]
+}

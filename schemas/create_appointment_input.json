@@ -1,0 +1,14 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "CreateAppointmentInput",
+  "type": "object",
+  "properties": {
+    "patient_id": { "type": "string", "format": "uuid" },
+    "doctor_id": { "type": "string", "format": "uuid" },
+    "hospital_id": { "type": "string", "format": "uuid" },
+    "slot_id": { "type": "string", "format": "uuid" },
+    "appointment_type": { "type": "string" },
+    "idempotency_key": { "type": "string" }
+  },
+  "required": ["patient_id", "doctor_id", "hospital_id", "slot_id", "idempotency_key"]
+}

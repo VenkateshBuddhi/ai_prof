@@ -1,0 +1,20 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Doctor",
+  "type": "object",
+  "properties": {
+    "doctor_id": { "type": "string", "format": "uuid" },
+    "tenant_id": { "type": "string", "format": "uuid" },
+    "ehr_doctor_id": { "type": ["string", "null"] },
+    "first_name": { "type": "string" },
+    "last_name": { "type": "string" },
+    "suffix": { "type": ["string", "null"] },
+    "specialty": { "type": "string" },
+    "license_number": { "type": ["string", "null"] },
+    "languages": { "type": "array", "items": { "type": "string" } },
+    "status": { "type": "string", "enum": ["Active", "Inactive", "Suspended", "Closed"] },
+    "created_at": { "type": "string", "format": "date-time" },
+    "updated_at": { "type": "string", "format": "date-time" }
+  },
+  "required": ["doctor_id", "tenant_id", "first_name", "last_name", "specialty", "status"]
+}

@@ -1,0 +1,11 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "RescheduleAppointmentInput",
+  "type": "object",
+  "properties": {
+    "appointment_id": { "type": "string", "format": "uuid" },
+    "slot_id": { "type": "string", "format": "uuid" },
+    "reason_code": { "type": ["string", "null"] }
+  },
+  "required": ["appointment_id", "slot_id"]
+}

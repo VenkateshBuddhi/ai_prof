@@ -1,0 +1,14 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "DoctorHospitalAffiliation",
+  "type": "object",
+  "properties": {
+    "affiliation_id": { "type": "string", "format": "uuid" },
+    "doctor_id": { "type": "string", "format": "uuid" },
+    "hospital_id": { "type": "string", "format": "uuid" },
+    "is_primary": { "type": "boolean" },
+    "status": { "type": "string", "enum": ["Active", "Inactive", "Suspended", "Closed"] },
+    "created_at": { "type": "string", "format": "date-time" }
+  },
+  "required": ["affiliation_id", "doctor_id", "hospital_id", "is_primary", "status"]
+}

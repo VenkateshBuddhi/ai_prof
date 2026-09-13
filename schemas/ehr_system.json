@@ -1,0 +1,17 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "EhrSystem",
+  "type": "object",
+  "properties": {
+    "ehr_system_id": { "type": "string", "format": "uuid" },
+    "tenant_id": { "type": "string", "format": "uuid" },
+    "vendor": { "type": "string", "enum": ["Epic", "Cerner", "AthenaHealth", "Allscripts", "Custom", "Other"] },
+    "name": { "type": "string" },
+    "base_url": { "type": ["string", "null"], "format": "uri" },
+    "auth_mode": { "type": "string", "enum": ["None", "OAuth2", "Basic", "Certificate", "APIKey"] },
+    "status": { "type": "string", "enum": ["Active", "Inactive", "Suspended", "Closed"] },
+    "created_at": { "type": "string", "format": "date-time" },
+    "updated_at": { "type": "string", "format": "date-time" }
+  },
+  "required": ["ehr_system_id", "tenant_id", "vendor", "name", "auth_mode", "status"]
+}

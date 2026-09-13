@@ -1,0 +1,20 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "AvailabilityTemplate",
+  "type": "object",
+  "properties": {
+    "template_id": { "type": "string", "format": "uuid" },
+    "doctor_id": { "type": "string", "format": "uuid" },
+    "hospital_id": { "type": "string", "format": "uuid" },
+    "day_of_week": { "type": "string", "enum": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"] },
+    "start_time": { "type": "string", "pattern": "^([01]\\d|2[0-3]):[0-5]\\d(:[0-5]\\d)?$" },
+    "end_time": { "type": "string", "pattern": "^([01]\\d|2[0-3]):[0-5]\\d(:[0-5]\\d)?$" },
+    "slot_duration_minutes": { "type": "integer", "minimum": 5, "maximum": 240 },
+    "buffer_minutes": { "type": "integer", "minimum": 0 },
+    "appointment_type": { "type": ["string", "null"] },
+    "is_active": { "type": "boolean" },
+    "created_at": { "type": "string", "format": "date-time" },
+    "updated_at": { "type": "string", "format": "date-time" }
+  },
+  "required": ["template_id", "doctor_id", "hospital_id", "day_of_week", "start_time", "end_time", "slot_duration_minutes", "is_active"]
+}

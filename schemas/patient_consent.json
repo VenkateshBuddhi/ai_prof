@@ -1,0 +1,16 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "PatientConsent",
+  "type": "object",
+  "properties": {
+    "consent_id": { "type": "string", "format": "uuid" },
+    "patient_id": { "type": "string", "format": "uuid" },
+    "scope": { "type": "string", "enum": ["EHR_DATA_SHARING", "SMS_REMINDERS", "VOICE_RECORDINGS", "QUESTIONNAIRE_ANSWERS"] },
+    "granted": { "type": "boolean" },
+    "granted_at": { "type": "string", "format": "date-time" },
+    "revoked_at": { "type": ["string", "null"], "format": "date-time" },
+    "source": { "type": "string", "enum": ["Voice", "Chat", "Portal", "Paper", "Admin"] },
+    "created_at": { "type": "string", "format": "date-time" }
+  },
+  "required": ["consent_id", "patient_id", "scope", "granted", "source"]
+}

@@ -1,0 +1,16 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ConversationSession",
+  "type": "object",
+  "properties": {
+    "session_id": { "type": "string", "format": "uuid" },
+    "tenant_id": { "type": "string", "format": "uuid" },
+    "patient_id": { "type": ["string", "null"], "format": "uuid" },
+    "channel": { "type": "string", "enum": ["Voice", "Chat", "Portal"] },
+    "status": { "type": "string", "enum": ["Active", "Ended", "Abandoned", "Escalated"] },
+    "started_at": { "type": "string", "format": "date-time" },
+    "ended_at": { "type": ["string", "null"], "format": "date-time" },
+    "transcript_uri": { "type": ["string", "null"] }
+  },
+  "required": ["session_id", "tenant_id", "channel", "status", "started_at"]
+}

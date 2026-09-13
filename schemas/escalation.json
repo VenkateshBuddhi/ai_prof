@@ -1,0 +1,17 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Escalation",
+  "type": "object",
+  "properties": {
+    "escalation_id": { "type": "string", "format": "uuid" },
+    "session_id": { "type": "string", "format": "uuid" },
+    "reason": { "type": "string" },
+    "destination_ref": { "type": ["string", "null"] },
+    "status": { "type": "string", "enum": ["Open", "Assigned", "Resolved", "Closed"] },
+    "resolved_by_admin_id": { "type": ["string", "null"], "format": "uuid" },
+    "resolution_note": { "type": ["string", "null"] },
+    "created_at": { "type": "string", "format": "date-time" },
+    "resolved_at": { "type": ["string", "null"], "format": "date-time" }
+  },
+  "required": ["escalation_id", "session_id", "reason", "status", "created_at"]
+}

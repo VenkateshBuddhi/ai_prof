@@ -1,0 +1,18 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "CheckAvailabilityInput",
+  "type": "object",
+  "properties": {
+    "doctor_id": { "type": "string", "format": "uuid" },
+    "date": { "type": "string", "format": "date" },
+    "time_range": {
+      "type": "object",
+      "properties": {
+        "start_time": { "type": "string" },
+        "end_time": { "type": "string" }
+      }
+    },
+    "appointment_type": { "type": "string" }
+  },
+  "required": ["doctor_id", "date"]
+}

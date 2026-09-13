@@ -1,0 +1,18 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Notification",
+  "type": "object",
+  "properties": {
+    "notification_id": { "type": "string", "format": "uuid" },
+    "tenant_id": { "type": "string", "format": "uuid" },
+    "patient_id": { "type": "string", "format": "uuid" },
+    "channel": { "type": "string", "enum": ["Voice", "SMS", "Email", "Push"] },
+    "template_key": { "type": "string" },
+    "payload": { "type": ["object", "null"] },
+    "status": { "type": "string", "enum": ["Queued", "Sent", "Delivered", "Failed", "Suppressed"] },
+    "provider_message_id": { "type": ["string", "null"] },
+    "sent_at": { "type": ["string", "null"], "format": "date-time" },
+    "created_at": { "type": "string", "format": "date-time" }
+  },
+  "required": ["notification_id", "tenant_id", "patient_id", "channel", "template_key", "status"]
+}
