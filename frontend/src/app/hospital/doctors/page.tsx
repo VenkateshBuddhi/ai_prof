@@ -3,9 +3,10 @@ import React from "react";
 import { DashboardShell } from "@/components/dashboard/shell";
 import { DataTable, StatusBadge, Column } from "@/components/dashboard/data-table";
 import { HOSPITAL_NAV } from "@/lib/constants";
-import { mockDoctors } from "@/lib/mock-data";
 import { Doctor } from "@/types";
 import { Plus } from "lucide-react";
+import { useDoctors } from "@/lib/queries";
+import { LiveBadge } from "@/components/dashboard/live-badge";
 
 const columns: Column<Doctor>[] = [
   { key: "name", label: "Doctor", sortable: true, render: (d) => (
@@ -22,10 +23,11 @@ const columns: Column<Doctor>[] = [
 ];
 
 export default function HospitalDoctorsPage() {
-  const data = mockDoctors.filter(d => d.hospital_id === "h1");
+  const { data, isLive, isLoading } = useDoctors();
   return (
     <DashboardShell navItems={HOSPITAL_NAV} sidebarTitle="City General Hospital" sidebarSubtitle="Hospital Admin" pageTitle="Doctors" pageSubtitle={`${data.length} doctors`}
       actions={<button className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-blue-600 to-cyan-500 px-4 py-2 text-sm font-medium text-white hover:from-blue-700 hover:to-cyan-600 transition-all"><Plus className="h-4 w-4" />Add Doctor</button>}>
+      <div className="mb-4"><LiveBadge live={isLive} loading={isLoading} /></div>
       <DataTable columns={columns} data={data} searchPlaceholder="Search doctors..." />
     </DashboardShell>
   );

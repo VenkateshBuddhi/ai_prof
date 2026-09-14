@@ -3,9 +3,10 @@ import React from "react";
 import { DashboardShell } from "@/components/dashboard/shell";
 import { DataTable, StatusBadge, Column } from "@/components/dashboard/data-table";
 import { HOSPITAL_NAV } from "@/lib/constants";
-import { mockAppointments } from "@/lib/mock-data";
 import { Appointment } from "@/types";
 import { formatDate } from "@/lib/utils";
+import { useAppointments } from "@/lib/queries";
+import { LiveBadge } from "@/components/dashboard/live-badge";
 
 const columns: Column<Appointment>[] = [
   { key: "patient_name", label: "Patient", sortable: true, render: (a) => <span className="font-medium">{a.patient_name}</span> },
@@ -19,9 +20,10 @@ const columns: Column<Appointment>[] = [
 ];
 
 export default function HospitalAppointmentsPage() {
-  const data = mockAppointments.filter(a => a.hospital_id === "h1");
+  const { data, isLive, isLoading } = useAppointments();
   return (
     <DashboardShell navItems={HOSPITAL_NAV} sidebarTitle="City General Hospital" sidebarSubtitle="Hospital Admin" pageTitle="Appointments" pageSubtitle={`${data.length} appointments`}>
+      <div className="mb-4"><LiveBadge live={isLive} loading={isLoading} /></div>
       <DataTable columns={columns} data={data} searchPlaceholder="Search appointments..." />
     </DashboardShell>
   );

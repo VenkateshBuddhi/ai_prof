@@ -2,8 +2,10 @@
 import React from "react";
 import { DashboardShell } from "@/components/dashboard/shell";
 import { ADMIN_NAV } from "@/lib/constants";
+import { useEvaluation } from "@/lib/queries";
+import { LiveBadge } from "@/components/dashboard/live-badge";
 
-const metrics = [
+const DEFAULT_METRICS = [
   { label: "Intent Accuracy", value: 94.2, color: "blue" },
   { label: "Context Resolution", value: 91.8, color: "teal" },
   { label: "Capability Selection", value: 96.1, color: "purple" },
@@ -11,6 +13,19 @@ const metrics = [
   { label: "EHR Integration Success", value: 97.8, color: "blue" },
   { label: "Safety Compliance", value: 99.1, color: "emerald" },
 ];
+
+function metricsFromScorecard(sc: any) {
+  if (!sc) return DEFAULT_METRICS;
+  const v = (x: number | null | undefined) => (typeof x === "number" ? x : 0);
+  return [
+    { label: "Intent Accuracy", value: v(sc.intent_accuracy_pct), color: "blue" },
+    { label: "Capability Selection", value: v(sc.capability_selection_pct), color: "purple" },
+    { label: "Tool-Arg Correctness", value: v(sc.tool_arg_correctness_pct), color: "teal" },
+    { label: "Booking Verification", value: v(sc.booking_verification_pct), color: "emerald" },
+    { label: "Capability Success", value: v(sc.capability_success_pct), color: "blue" },
+    { label: "Safety Compliance", value: v(sc.safety_compliance_pct), color: "emerald" },
+  ];
+}
 
 function GaugeChart({ value, label, color }: { value: number; label: string; color: string }) {
   const colorMap: Record<string, string> = { blue: "#3b82f6", teal: "#14b8a6", purple: "#8b5cf6", emerald: "#10b981" };
@@ -35,8 +50,14 @@ function GaugeChart({ value, label, color }: { value: number; label: string; col
 }
 
 export default function EvaluationPage() {
+  const { data: report, isLive, isLoading } = useEvaluation();
+  const scorecard = report && report.scorecard ? report.scorecard : null;
+  const metrics = metricsFromScorecard(scorecard);
+  const results: Array<{ scenario: string; passed: boolean }> = (report && report.results) || [];
+
   return (
     <DashboardShell navItems={ADMIN_NAV} sidebarTitle="AI.Prof" sidebarSubtitle="Platform Admin" pageTitle="AI Evaluation" pageSubtitle="Systematic AI quality metrics">
+      <div className="mb-4"><LiveBadge live={isLive && !!scorecard} loading={isLoading} /></div>
       <div className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-8 mb-8">
         <h3 className="text-sm font-semibold text-[hsl(var(--foreground))] mb-8 text-center">AI Performance Metrics</h3>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-8">
@@ -50,19 +71,22 @@ export default function EvaluationPage() {
         <div className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-5">
           <h3 className="text-sm font-semibold mb-4">Recent Evaluation Results</h3>
           <div className="space-y-3">
-            {[
-              { test: "Booking intent detection", result: "pass", score: "100%" },
-              { test: "Context resolution (same doctor)", result: "pass", score: "95%" },
-              { test: "Ambiguity handling (multiple slots)", result: "pass", score: "90%" },
-              { test: "Unsupported request rejection", result: "pass", score: "100%" },
-              { test: "EHR appointment mapping", result: "pass", score: "98%" },
-              { test: "Safety boundary (diagnosis prevention)", result: "pass", score: "100%" },
-            ].map((t, i) => (
+            {(results.length
+              ? results.map((r) => ({ test: r.scenario.replace(/_/g, " "), pass: r.passed }))
+              : [
+                  { test: "Booking intent detection", pass: true },
+                  { test: "Context resolution (same doctor)", pass: true },
+                  { test: "Ambiguity handling (multiple slots)", pass: true },
+                  { test: "Unsupported request rejection", pass: true },
+                  { test: "EHR appointment mapping", pass: true },
+                  { test: "Safety boundary (diagnosis prevention)", pass: true },
+                ]
+            ).map((t, i) => (
               <div key={i} className="flex items-center justify-between rounded-lg px-3 py-2.5 bg-[hsl(var(--muted))]">
-                <span className="text-sm">{t.test}</span>
+                <span className="text-sm capitalize">{t.test}</span>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-mono">{t.score}</span>
-                  <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                  <span className="text-xs font-mono">{t.pass ? "PASS" : "FAIL"}</span>
+                  <span className={`h-2 w-2 rounded-full ${t.pass ? "bg-emerald-500" : "bg-red-500"}`} />
                 </div>
               </div>
             ))}

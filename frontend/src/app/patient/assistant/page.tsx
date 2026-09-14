@@ -1,303 +1,206 @@
 "use client";
-import React, { useState } from "react";
+
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import {
+  Room,
+  RoomEvent,
+  Track,
+  type Participant,
+  type RemoteTrack,
+  type TranscriptionSegment,
+} from "livekit-client";
+import { Bot, Loader2, Mic, MicOff, PhoneCall, PhoneOff, User } from "lucide-react";
+
 import { DashboardShell } from "@/components/dashboard/shell";
 import { PATIENT_NAV } from "@/lib/constants";
-import { Mic, MicOff, Send, Bot, User, Sparkles, CheckCircle2, Calendar, Clock, AlertCircle, Volume2 } from "lucide-react";
-import { mockDoctors } from "@/lib/mock-data";
+import { apiPost } from "@/lib/api";
 
-interface Message {
-  id: string;
-  sender: "ai" | "user";
-  text: string;
-  timestamp: string;
-  actionCard?: {
-    type: "slot_picker" | "booking_confirmation" | "pre_visit_form";
-    data: any;
-  };
+type Status = "idle" | "connecting" | "live" | "ended" | "error";
+type Line = { id: string; who: "agent" | "you"; text: string; final: boolean };
+
+interface TokenResponse {
+  url: string;
+  token: string;
+  room: string;
 }
 
 export default function PatientAssistantPage() {
-  const [isListening, setIsListening] = useState(false);
-  const [inputText, setInputText] = useState("");
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: "1",
-      sender: "ai",
-      text: "Hello Michael! I'm your AI Healthcare Assistant. How can I help you today? You can say things like 'Book an appointment with a cardiologist next Tuesday' or ask questions about symptoms.",
-      timestamp: "Just now",
-    },
-  ]);
-  const [step, setStep] = useState<number>(0);
+  const [status, setStatus] = useState<Status>("idle");
+  const [error, setError] = useState("");
+  const [micOn, setMicOn] = useState(true);
+  const [lines, setLines] = useState<Line[]>([]);
 
-  const handleSend = (textToSend?: string) => {
-    const text = textToSend || inputText;
-    if (!text.trim()) return;
+  const roomRef = useRef<Room | null>(null);
+  const audioRef = useRef<HTMLDivElement | null>(null);
+  const scrollRef = useRef<HTMLDivElement | null>(null);
 
-    const userMsg: Message = {
-      id: Date.now().toString(),
-      sender: "user",
-      text,
-      timestamp: "Just now",
-    };
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
+  }, [lines]);
 
-    setMessages((prev) => [...prev, userMsg]);
-    setInputText("");
+  // clean up on unmount
+  useEffect(() => () => void roomRef.current?.disconnect(), []);
 
-    // Simulate AI response based on step
-    setTimeout(() => {
-      if (step === 0) {
-        const aiMsg: Message = {
-          id: (Date.now() + 1).toString(),
-          sender: "ai",
-          text: "I found Dr. Robert Chen (Cardiology) at City General Hospital. Here are the top available time slots for next Tuesday:",
-          timestamp: "Just now",
-          actionCard: {
-            type: "slot_picker",
-            data: {
-              doctor: "Dr. Robert Chen",
-              specialty: "Cardiology",
-              slots: [
-                { id: "s1", time: "Tue, Oct 24 • 09:30 AM", fee: "$150" },
-                { id: "s2", time: "Tue, Oct 24 • 02:00 PM", fee: "$150" },
-                { id: "s3", time: "Tue, Oct 24 • 04:30 PM", fee: "$150" },
-              ],
-            },
-          },
-        };
-        setMessages((prev) => [...prev, aiMsg]);
-        setStep(1);
-      } else if (step === 1) {
-        const aiMsg: Message = {
-          id: (Date.now() + 1).toString(),
-          sender: "ai",
-          text: "Great choice! To ensure Dr. Chen is well-prepared, could you briefly describe the main reason for your visit and if you are currently experiencing any chest discomfort or palpitations?",
-          timestamp: "Just now",
-        };
-        setMessages((prev) => [...prev, aiMsg]);
-        setStep(2);
-      } else {
-        const aiMsg: Message = {
-          id: (Date.now() + 1).toString(),
-          sender: "ai",
-          text: "Thank you! I have booked your appointment and updated Dr. Chen's clinical pre-visit notes. A confirmation SMS and calendar invite have been dispatched.",
-          timestamp: "Just now",
-          actionCard: {
-            type: "booking_confirmation",
-            data: {
-              bookingId: "APT-88219",
-              doctor: "Dr. Robert Chen, MD",
-              specialty: "Cardiology",
-              hospital: "City General Hospital - Suite 402",
-              dateTime: "Tuesday, Oct 24, 2026 at 09:30 AM",
-              status: "Confirmed",
-            },
-          },
-        };
-        setMessages((prev) => [...prev, aiMsg]);
-        setStep(0);
+  const upsert = (seg: TranscriptionSegment, who: "agent" | "you") =>
+    setLines((prev) => {
+      const idx = prev.findIndex((l) => l.id === seg.id);
+      const line: Line = { id: seg.id, who, text: seg.text, final: seg.final };
+      if (idx >= 0) {
+        const copy = [...prev];
+        copy[idx] = line;
+        return copy;
       }
-    }, 1000);
-  };
+      return [...prev, line];
+    });
 
-  const handleSelectSlot = (slotTime: string) => {
-    handleSend(`I would like the slot on ${slotTime}`);
-  };
+  const connect = useCallback(async () => {
+    setStatus("connecting");
+    setError("");
+    setLines([]);
+    try {
+      const { url, token } = await apiPost<TokenResponse>("/api/voice/token", { name: "Patient" });
+      const room = new Room();
+      roomRef.current = room;
 
-  const toggleListening = () => {
-    if (!isListening) {
-      setIsListening(true);
-      setTimeout(() => {
-        setIsListening(false);
-        handleSend("I need to see a cardiologist next week for a routine checkup.");
-      }, 3000);
-    } else {
-      setIsListening(false);
+      room.on(RoomEvent.TrackSubscribed, (track: RemoteTrack) => {
+        if (track.kind === Track.Kind.Audio) {
+          const el = track.attach();
+          el.autoplay = true;
+          audioRef.current?.appendChild(el);
+        }
+      });
+      room.on(
+        RoomEvent.TranscriptionReceived,
+        (segments: TranscriptionSegment[], participant?: Participant) => {
+          const who = participant && !participant.isLocal ? "agent" : "you";
+          segments.forEach((s) => upsert(s, who));
+        }
+      );
+      room.on(RoomEvent.Disconnected, () => setStatus("ended"));
+
+      await room.connect(url, token);
+      await room.localParticipant.setMicrophoneEnabled(true);
+      setMicOn(true);
+      setStatus("live");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to connect");
+      setStatus("error");
     }
-  };
+  }, []);
+
+  const disconnect = useCallback(async () => {
+    await roomRef.current?.disconnect();
+    roomRef.current = null;
+    setStatus("ended");
+  }, []);
+
+  const toggleMic = useCallback(async () => {
+    const lp = roomRef.current?.localParticipant;
+    if (!lp) return;
+    const next = !micOn;
+    await lp.setMicrophoneEnabled(next);
+    setMicOn(next);
+  }, [micOn]);
+
+  const isLive = status === "live";
+  const statusPill = {
+    idle: ["bg-gray-100 text-gray-600", "Not connected"],
+    connecting: ["bg-amber-100 text-amber-700", "Connecting…"],
+    live: ["bg-emerald-100 text-emerald-700", "● Live"],
+    ended: ["bg-gray-100 text-gray-600", "Call ended"],
+    error: ["bg-red-100 text-red-700", "Error"],
+  }[status];
 
   return (
     <DashboardShell
       navItems={PATIENT_NAV}
-      role="patient"
-      sidebarTitle="Patient Portal"
-      sidebarSubtitle="AI Voice Assistant"
+      sidebarTitle="AI.Prof"
+      sidebarSubtitle="Patient"
+      pageTitle="AI Assistant"
+      pageSubtitle="Talk to the scheduling assistant by voice, right in your browser"
     >
-      <div className="max-w-4xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border pb-6">
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-bold tracking-tight text-foreground">AI Voice & Booking Assistant</h1>
-              <span className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
-                <Sparkles className="h-3 w-3" /> Live Agent
+      <div className="mx-auto max-w-2xl">
+        {/* Status + controls */}
+        <div className="mb-6 flex items-center justify-between rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-cyan-400">
+              <Bot className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold">Healthcare Assistant</p>
+              <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${statusPill[0]}`}>
+                {statusPill[1]}
               </span>
             </div>
-            <p className="text-sm text-muted-foreground mt-1">
-              Speak or chat naturally to schedule visits, ask clinical preparation questions, or update pre-visit records.
-            </p>
           </div>
 
-          <div className="flex items-center gap-3">
-            <button
-              onClick={toggleListening}
-              className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm transition-all shadow-md ${
-                isListening
-                  ? "bg-rose-500 text-white animate-pulse shadow-rose-500/30"
-                  : "bg-primary text-primary-foreground hover:opacity-90 shadow-primary/20"
-              }`}
-            >
-              {isListening ? (
-                <>
-                  <MicOff className="h-4 w-4" />
-                  Listening (Speak now)...
-                </>
-              ) : (
-                <>
-                  <Mic className="h-4 w-4" />
-                  Start Voice Mode
-                </>
-              )}
-            </button>
+          <div className="flex items-center gap-2">
+            {isLive && (
+              <button
+                onClick={toggleMic}
+                className={`flex h-11 w-11 items-center justify-center rounded-full transition ${
+                  micOn ? "bg-blue-100 text-blue-700 hover:bg-blue-200" : "bg-gray-200 text-gray-500"
+                }`}
+                title={micOn ? "Mute" : "Unmute"}
+              >
+                {micOn ? <Mic className="h-5 w-5" /> : <MicOff className="h-5 w-5" />}
+              </button>
+            )}
+            {isLive ? (
+              <button
+                onClick={disconnect}
+                className="flex items-center gap-2 rounded-full bg-red-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-red-700"
+              >
+                <PhoneOff className="h-4 w-4" /> End
+              </button>
+            ) : (
+              <button
+                onClick={connect}
+                disabled={status === "connecting"}
+                className="flex items-center gap-2 rounded-full bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60"
+              >
+                {status === "connecting" ? <Loader2 className="h-4 w-4 animate-spin" /> : <PhoneCall className="h-4 w-4" />}
+                {status === "connecting" ? "Connecting" : status === "ended" ? "Call again" : "Start call"}
+              </button>
+            )}
           </div>
         </div>
 
-        {/* Audio Waveform Animation during listening */}
-        {isListening && (
-          <div className="rounded-2xl border border-rose-500/30 bg-rose-500/5 p-6 flex flex-col items-center justify-center gap-4 animate-in fade-in">
-            <div className="flex items-center gap-1.5 h-12">
-              {[40, 75, 95, 60, 30, 85, 100, 70, 45, 90, 60, 30].map((h, i) => (
-                <div
-                  key={i}
-                  className="w-1.5 bg-rose-500 rounded-full animate-pulse"
-                  style={{
-                    height: `${h}%`,
-                    animationDelay: `${i * 80}ms`,
-                    animationDuration: "800ms",
-                  }}
-                />
-              ))}
-            </div>
-            <p className="text-xs font-semibold text-rose-600">
-              Capturing audio stream • Deepgram Nova-3 Active
-            </p>
-          </div>
+        {error && (
+          <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
         )}
 
-        {/* Chat Stream Window */}
-        <div className="rounded-2xl border border-border bg-card shadow-sm p-6 flex flex-col h-[520px]">
-          <div className="flex-1 overflow-y-auto space-y-6 pr-2">
-            {messages.map((msg) => (
-              <div
-                key={msg.id}
-                className={`flex gap-3.5 ${
-                  msg.sender === "user" ? "flex-row-reverse" : "flex-row"
-                }`}
-              >
-                <div
-                  className={`h-9 w-9 rounded-xl flex items-center justify-center shrink-0 ${
-                    msg.sender === "user"
-                      ? "bg-primary text-primary-foreground font-semibold text-xs"
-                      : "bg-emerald-500/15 text-emerald-600 border border-emerald-500/30"
-                  }`}
-                >
-                  {msg.sender === "user" ? <User className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
-                </div>
-
-                <div
-                  className={`space-y-3 max-w-[80%] ${
-                    msg.sender === "user" ? "items-end" : "items-start"
-                  }`}
-                >
-                  <div
-                    className={`rounded-2xl px-4 py-3 text-sm leading-relaxed ${
-                      msg.sender === "user"
-                        ? "bg-primary text-primary-foreground rounded-tr-none"
-                        : "bg-muted text-foreground rounded-tl-none border border-border"
-                    }`}
-                  >
-                    {msg.text}
-                  </div>
-
-                  {/* Dynamic Action Cards */}
-                  {msg.actionCard?.type === "slot_picker" && (
-                    <div className="rounded-2xl border border-border bg-background p-4 shadow-sm space-y-3">
-                      <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                        Available Consultation Slots
-                      </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                        {msg.actionCard.data.slots.map((s: any) => (
-                          <button
-                            key={s.id}
-                            onClick={() => handleSelectSlot(s.time)}
-                            className="p-3 rounded-xl border border-border bg-card hover:border-emerald-500 hover:bg-emerald-500/5 transition-all text-left flex flex-col justify-between gap-1 group"
-                          >
-                            <span className="text-xs font-semibold text-foreground group-hover:text-emerald-600">
-                              {s.time}
-                            </span>
-                            <span className="text-[11px] text-muted-foreground font-medium">
-                              Fee: {s.fee}
-                            </span>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {msg.actionCard?.type === "booking_confirmation" && (
-                    <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/5 p-5 shadow-sm space-y-4">
-                      <div className="flex items-center gap-2 text-emerald-600 font-bold text-sm">
-                        <CheckCircle2 className="h-5 w-5" />
-                        Appointment Successfully Confirmed!
-                      </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                        <div className="p-3 rounded-xl bg-card border border-border">
-                          <span className="text-muted-foreground block mb-1">Booking Ref</span>
-                          <span className="font-mono font-bold text-foreground">
-                            {msg.actionCard.data.bookingId}
-                          </span>
-                        </div>
-                        <div className="p-3 rounded-xl bg-card border border-border">
-                          <span className="text-muted-foreground block mb-1">Doctor</span>
-                          <span className="font-bold text-foreground">
-                            {msg.actionCard.data.doctor}
-                          </span>
-                        </div>
-                        <div className="p-3 rounded-xl bg-card border border-border sm:col-span-2">
-                          <span className="text-muted-foreground block mb-1">Time & Venue</span>
-                          <span className="font-semibold text-foreground">
-                            {msg.actionCard.data.dateTime} • {msg.actionCard.data.hospital}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  <span className="text-[10px] text-muted-foreground block px-1">
-                    {msg.timestamp}
-                  </span>
-                </div>
+        {/* Live transcript */}
+        <div
+          ref={scrollRef}
+          className="h-[420px] space-y-3 overflow-y-auto rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-5"
+        >
+          {lines.length === 0 && (
+            <div className="flex h-full flex-col items-center justify-center text-center text-sm text-[hsl(var(--muted-foreground))]">
+              <Bot className="mb-3 h-10 w-10 opacity-40" />
+              {status === "idle" && "Press “Start call” and allow microphone access, then just talk — e.g. “I’d like to book a cardiologist.”"}
+              {status === "connecting" && "Connecting to the assistant…"}
+              {status === "live" && "Listening… say something to begin."}
+              {status === "ended" && "Call ended. Press “Call again” to start over."}
+              {status === "error" && "Couldn’t connect. Check the backend + LiveKit worker are running."}
+            </div>
+          )}
+          {lines.map((l) => (
+            <div key={l.id} className={`flex gap-2 ${l.who === "you" ? "flex-row-reverse" : ""}`}>
+              <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${l.who === "you" ? "bg-blue-600" : "bg-gradient-to-br from-blue-500 to-cyan-400"}`}>
+                {l.who === "you" ? <User className="h-4 w-4 text-white" /> : <Bot className="h-4 w-4 text-white" />}
               </div>
-            ))}
-          </div>
-
-          {/* Chat Input Footer */}
-          <div className="mt-4 pt-4 border-t border-border flex items-center gap-3">
-            <input
-              type="text"
-              value={inputText}
-              onChange={(e) => setInputText(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleSend()}
-              placeholder="Ask anything or request a booking (e.g. 'Book cardiology slot next week')..."
-              className="flex-1 rounded-xl border border-border bg-background px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-            />
-            <button
-              onClick={() => handleSend()}
-              className="inline-flex items-center justify-center h-10 w-10 rounded-xl bg-primary text-primary-foreground hover:opacity-90 transition-opacity shadow"
-            >
-              <Send className="h-4 w-4" />
-            </button>
-          </div>
+              <div className={`max-w-[80%] rounded-2xl px-4 py-2 text-sm ${
+                l.who === "you" ? "bg-blue-600 text-white" : "bg-[hsl(var(--muted))] text-[hsl(var(--foreground))]"
+              } ${l.final ? "" : "opacity-70"}`}>
+                {l.text}
+              </div>
+            </div>
+          ))}
         </div>
+
+        {/* agent audio elements are attached here */}
+        <div ref={audioRef} className="hidden" />
       </div>
     </DashboardShell>
   );

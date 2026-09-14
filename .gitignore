@@ -30,8 +30,15 @@ wheels/
 venv/
 ENV/
 
+# Generated eval artifacts
+eval_report.json
+
 # IDE & OS files
 .idea/
 .vscode/
 .DS_Store
 *.log
+
+# AI-tool agent configs (local-only)
+.claude/
+.serena/

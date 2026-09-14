@@ -3,9 +3,10 @@ import React from "react";
 import { DashboardShell } from "@/components/dashboard/shell";
 import { DataTable, Column } from "@/components/dashboard/data-table";
 import { ADMIN_NAV } from "@/lib/constants";
-import { mockAuditEvents } from "@/lib/mock-data";
 import { AuditEvent } from "@/types";
 import { formatDateTime } from "@/lib/utils";
+import { useAudit } from "@/lib/queries";
+import { LiveBadge } from "@/components/dashboard/live-badge";
 
 const columns: Column<AuditEvent>[] = [
   { key: "timestamp", label: "Time", sortable: true, render: (e) => <span className="text-xs font-mono">{formatDateTime(e.timestamp)}</span> },
@@ -22,9 +23,11 @@ const columns: Column<AuditEvent>[] = [
 ];
 
 export default function AuditPage() {
+  const { data: events, isLive, isLoading } = useAudit();
   return (
     <DashboardShell navItems={ADMIN_NAV} sidebarTitle="AI.Prof" sidebarSubtitle="Platform Admin" pageTitle="Audit Logs" pageSubtitle="Complete audit trail of platform operations">
-      <DataTable columns={columns} data={mockAuditEvents} searchPlaceholder="Search audit events..." />
+      <div className="mb-4"><LiveBadge live={isLive} loading={isLoading} /></div>
+      <DataTable columns={columns} data={events} searchPlaceholder="Search audit events..." />
     </DashboardShell>
   );
 }

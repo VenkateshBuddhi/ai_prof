@@ -3,9 +3,10 @@ import React from "react";
 import { DashboardShell } from "@/components/dashboard/shell";
 import { DataTable, StatusBadge, Column } from "@/components/dashboard/data-table";
 import { ADMIN_NAV } from "@/lib/constants";
-import { mockWorkflows } from "@/lib/mock-data";
 import { Workflow } from "@/types";
 import { formatDateTime } from "@/lib/utils";
+import { useWorkflows } from "@/lib/queries";
+import { LiveBadge } from "@/components/dashboard/live-badge";
 
 const columns: Column<Workflow>[] = [
   { key: "type", label: "Workflow", sortable: true, render: (w) => <span className="font-medium capitalize">{w.type.replace(/_/g, " ")}</span> },
@@ -18,9 +19,11 @@ const columns: Column<Workflow>[] = [
 ];
 
 export default function WorkflowsPage() {
+  const { data: workflows, isLive, isLoading } = useWorkflows();
   return (
     <DashboardShell navItems={ADMIN_NAV} sidebarTitle="AI.Prof" sidebarSubtitle="Platform Admin" pageTitle="Workflows" pageSubtitle="Background workflow executions">
-      <DataTable columns={columns} data={mockWorkflows} searchPlaceholder="Search workflows..." />
+      <div className="mb-4"><LiveBadge live={isLive} loading={isLoading} /></div>
+      <DataTable columns={columns} data={workflows} searchPlaceholder="Search workflows..." />
     </DashboardShell>
   );
 }

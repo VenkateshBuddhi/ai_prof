@@ -4,7 +4,9 @@ import React from "react";
 import { DashboardShell } from "@/components/dashboard/shell";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { ADMIN_NAV } from "@/lib/constants";
-import { mockPlatformKPIs, mockAppointments, mockAIConversations, mockAuditEvents } from "@/lib/mock-data";
+import { mockAppointments, mockAIConversations, mockAuditEvents } from "@/lib/mock-data";
+import { useKpis } from "@/lib/queries";
+import { LiveBadge } from "@/components/dashboard/live-badge";
 import { StatusBadge } from "@/components/dashboard/data-table";
 import { formatDateTime } from "@/lib/utils";
 import {
@@ -15,7 +17,7 @@ import { mockAppointmentsTrend, mockAILatencyTrend, mockSpecialtyDistribution } 
 const CHART_COLORS = ["#3b82f6", "#06b6d4", "#8b5cf6", "#f59e0b", "#ef4444", "#10b981"];
 
 export default function AdminOverviewPage() {
-  const kpis = mockPlatformKPIs;
+  const { data: kpis, isLive, isLoading } = useKpis();
 
   return (
     <DashboardShell
@@ -25,6 +27,7 @@ export default function AdminOverviewPage() {
       pageTitle="Platform Overview"
       pageSubtitle="Global healthcare operations dashboard"
     >
+      <div className="mb-4"><LiveBadge live={isLive} loading={isLoading} /></div>
       {/* KPI Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-8">
         <StatCard title="Total Hospitals" value={kpis.total_hospitals} icon="Building2" color="blue" trend={{ value: 12, label: "this month" }} />

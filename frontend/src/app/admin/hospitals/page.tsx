@@ -3,9 +3,10 @@ import React from "react";
 import { DashboardShell } from "@/components/dashboard/shell";
 import { DataTable, StatusBadge, Column } from "@/components/dashboard/data-table";
 import { ADMIN_NAV } from "@/lib/constants";
-import { mockHospitals } from "@/lib/mock-data";
 import { Hospital } from "@/types";
 import { formatDate } from "@/lib/utils";
+import { useHospitals } from "@/lib/queries";
+import { LiveBadge } from "@/components/dashboard/live-badge";
 
 const columns: Column<Hospital>[] = [
   { key: "name", label: "Hospital", sortable: true, render: (h) => <span className="font-medium">{h.name}</span> },
@@ -17,9 +18,11 @@ const columns: Column<Hospital>[] = [
 ];
 
 export default function HospitalsPage() {
+  const { data: hospitals, isLive, isLoading } = useHospitals();
   return (
-    <DashboardShell navItems={ADMIN_NAV} sidebarTitle="AI.Prof" sidebarSubtitle="Platform Admin" pageTitle="Hospitals" pageSubtitle={`${mockHospitals.length} hospitals registered`}>
-      <DataTable columns={columns} data={mockHospitals} searchPlaceholder="Search hospitals..." />
+    <DashboardShell navItems={ADMIN_NAV} sidebarTitle="AI.Prof" sidebarSubtitle="Platform Admin" pageTitle="Hospitals" pageSubtitle={`${hospitals.length} hospitals registered`}>
+      <div className="mb-4"><LiveBadge live={isLive} loading={isLoading} /></div>
+      <DataTable columns={columns} data={hospitals} searchPlaceholder="Search hospitals..." />
     </DashboardShell>
   );
 }
