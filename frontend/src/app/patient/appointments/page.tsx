@@ -2,13 +2,15 @@
 import React, { useState } from "react";
 import { DashboardShell } from "@/components/dashboard/shell";
 import { PATIENT_NAV } from "@/lib/constants";
-import { mockAppointments } from "@/lib/mock-data";
+import { useAppointments } from "@/lib/queries";
+import { LiveBadge } from "@/components/dashboard/live-badge";
 import { Calendar, Clock, Video, MapPin, Search, Filter, AlertCircle, FileText } from "lucide-react";
 
 export default function PatientAppointmentsPage() {
   const [filter, setFilter] = useState<string>("all");
+  const { data: appointments, isLive, isLoading } = useAppointments();
 
-  const filtered = mockAppointments.filter((a) => {
+  const filtered = appointments.filter((a: any) => {
     if (filter === "all") return true;
     return a.status === filter;
   });
@@ -23,7 +25,10 @@ export default function PatientAppointmentsPage() {
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-foreground">My Appointments</h1>
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl font-bold tracking-tight text-foreground">My Appointments</h1>
+              <LiveBadge live={isLive} loading={isLoading} />
+            </div>
             <p className="text-sm text-muted-foreground mt-1">
               View your upcoming, past, and pending clinical appointments with your healthcare providers.
             </p>

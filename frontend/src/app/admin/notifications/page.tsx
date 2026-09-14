@@ -8,6 +8,8 @@ import { Notification } from "@/types";
 import { formatDateTime } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 
+import { LiveBadge } from "@/components/dashboard/live-badge";
+
 const columns: Column<Notification>[] = [
   { key: "title", label: "Title", sortable: true, render: (n) => (
     <div className="flex items-center gap-2">
@@ -23,6 +25,7 @@ const columns: Column<Notification>[] = [
 export default function NotificationsPage() {
   return (
     <DashboardShell navItems={ADMIN_NAV} sidebarTitle="AI.Prof" sidebarSubtitle="Platform Admin" pageTitle="Notifications" pageSubtitle="System notifications and alerts">
+      <div className="mb-6"><LiveBadge live={false} /></div>
       <DataTable columns={columns} data={mockNotifications} searchPlaceholder="Search notifications..." />
     </DashboardShell>
   );

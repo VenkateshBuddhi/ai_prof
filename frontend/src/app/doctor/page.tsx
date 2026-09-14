@@ -3,17 +3,22 @@ import React from "react";
 import { DashboardShell } from "@/components/dashboard/shell";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { DOCTOR_NAV } from "@/lib/constants";
-import { mockAppointments, mockQuestionnaireResponses } from "@/lib/mock-data";
+import { mockQuestionnaireResponses } from "@/lib/mock-data";
+import { useAppointments } from "@/lib/queries";
 import { StatusBadge } from "@/components/dashboard/data-table";
+import { LiveBadge } from "@/components/dashboard/live-badge";
 import { Clock, Calendar } from "lucide-react";
 
 export default function DoctorOverviewPage() {
-  const myAppointments = mockAppointments.filter(a => a.doctor_id === "d1");
-  const todayAppointments = myAppointments.filter(a => a.status === "confirmed" || a.status === "completed");
+  const { data: appointments, isLive, isLoading } = useAppointments();
+  
+  const myAppointments = appointments.filter((a: any) => a.doctor_id === "d1");
+  const todayAppointments = myAppointments.filter((a: any) => a.status === "confirmed" || a.status === "completed");
   const pending = mockQuestionnaireResponses.filter(r => r.status === "completed");
 
   return (
     <DashboardShell navItems={DOCTOR_NAV} sidebarTitle="Dr. Arun Sharma" sidebarSubtitle="Cardiology" pageTitle="Dashboard" pageSubtitle="Welcome back, Dr. Sharma">
+      <div className="mb-6"><LiveBadge live={isLive} loading={isLoading} /></div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <StatCard title="Today's Appointments" value={todayAppointments.length} icon="CalendarCheck" color="blue" />
         <StatCard title="Upcoming This Week" value={myAppointments.length} icon="Calendar" color="teal" />

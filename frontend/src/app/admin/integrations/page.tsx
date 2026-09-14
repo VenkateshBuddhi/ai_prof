@@ -8,6 +8,8 @@ import { mockEHROperations } from "@/lib/mock-data";
 import { EHROperation } from "@/types";
 import { formatDateTime } from "@/lib/utils";
 
+import { LiveBadge } from "@/components/dashboard/live-badge";
+
 const columns: Column<EHROperation>[] = [
   { key: "hospital_name", label: "Hospital", sortable: true, render: (o) => <span className="font-medium">{o.hospital_name}</span> },
   { key: "operation_type", label: "Operation", render: (o) => <span className="capitalize text-xs">{o.operation_type.replace(/_/g, " ")}</span> },
@@ -27,6 +29,7 @@ export default function IntegrationsPage() {
 
   return (
     <DashboardShell navItems={ADMIN_NAV} sidebarTitle="AI.Prof" sidebarSubtitle="Platform Admin" pageTitle="EHR / Integration Activity" pageSubtitle="Healthcare system integration operations">
+      <div className="mb-6"><LiveBadge live={false} /></div>
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-6">
         <StatCard title="Total Operations" value={mockEHROperations.length} icon="Link2" color="blue" />
         <StatCard title="Successful" value={success} icon="CheckCircle" color="emerald" />

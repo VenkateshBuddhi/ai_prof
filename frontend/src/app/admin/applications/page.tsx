@@ -4,16 +4,16 @@ import React from "react";
 import { DashboardShell } from "@/components/dashboard/shell";
 import { DataTable, StatusBadge, Column } from "@/components/dashboard/data-table";
 import { ADMIN_NAV } from "@/lib/constants";
-import { mockHospitals } from "@/lib/mock-data";
-import { Hospital } from "@/types";
-import { formatDate } from "@/lib/utils";
+import { useHospitals } from "@/lib/queries";
+import { formatDateTime } from "@/lib/utils";
+import { LiveBadge } from "@/components/dashboard/live-badge";
 
-const columns: Column<Hospital>[] = [
+const columns: Column<any>[] = [
   { key: "name", label: "Hospital Name", sortable: true, render: (h) => <span className="font-medium">{h.name}</span> },
   { key: "city", label: "City", sortable: true },
   { key: "status", label: "Status", render: (h) => <StatusBadge status={h.status} /> },
   { key: "departments", label: "Departments", render: (h) => <span className="text-xs">{h.departments.length} depts</span> },
-  { key: "created_at", label: "Registered", sortable: true, render: (h) => formatDate(h.created_at) },
+  { key: "created_at", label: "Registered", sortable: true, render: (h) => formatDateTime(h.created_at || h.timestamp) },
   {
     key: "actions", label: "Actions",
     render: (h) => (
@@ -33,10 +33,12 @@ const columns: Column<Hospital>[] = [
 ];
 
 export default function ApplicationsPage() {
-  const pendingHospitals = mockHospitals.filter(h => ["submitted", "under_review"].includes(h.status));
+  const { data: hospitals, isLive, isLoading } = useHospitals();
+
   return (
-    <DashboardShell navItems={ADMIN_NAV} sidebarTitle="AI.Prof" sidebarSubtitle="Platform Admin" pageTitle="Hospital Applications" pageSubtitle={`${pendingHospitals.length} pending review`}>
-      <DataTable columns={columns} data={mockHospitals} searchPlaceholder="Search hospitals..." emptyMessage="No hospital applications" />
+    <DashboardShell navItems={ADMIN_NAV} sidebarTitle="AI.Prof" sidebarSubtitle="Platform Admin" pageTitle="Hospital Applications" pageSubtitle="Manage onboarding hospitals">
+      <div className="mb-6"><LiveBadge live={isLive} loading={isLoading} /></div>
+      <DataTable columns={columns} data={hospitals} searchPlaceholder="Search hospitals..." emptyMessage="No hospital applications" />
     </DashboardShell>
   );
 }

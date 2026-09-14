@@ -3,13 +3,15 @@ import React, { useState } from "react";
 import { DashboardShell } from "@/components/dashboard/shell";
 import { DataTable, StatusBadge, Column } from "@/components/dashboard/data-table";
 import { DOCTOR_NAV } from "@/lib/constants";
-import { mockAppointments, AppointmentMock } from "@/lib/mock-data";
+import { useAppointments } from "@/lib/queries";
+import { LiveBadge } from "@/components/dashboard/live-badge";
 import { Video, FileText, CheckCircle, Clock } from "lucide-react";
 
 export default function DoctorAppointmentsPage() {
-  const doctorAppointments = mockAppointments.slice(0, 8);
+  const { data: appointments, isLive, isLoading } = useAppointments();
+  const doctorAppointments = appointments.slice(0, 8);
 
-  const columns: Column<AppointmentMock>[] = [
+  const columns: Column<any>[] = [
     {
       header: "Patient",
       accessor: (row) => (
@@ -77,7 +79,10 @@ export default function DoctorAppointmentsPage() {
     >
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">Doctor Clinical Appointments</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">Doctor Clinical Appointments</h1>
+            <LiveBadge live={isLive} loading={isLoading} />
+          </div>
           <p className="text-sm text-muted-foreground mt-1">
             Manage your scheduled patient consultations, pre-visit AI summaries, and session notes.
           </p>

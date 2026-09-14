@@ -3,25 +3,33 @@ import React from "react";
 import { DashboardShell } from "@/components/dashboard/shell";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { HOSPITAL_NAV } from "@/lib/constants";
-import { mockHospitalKPIs, mockAppointments, mockDoctors } from "@/lib/mock-data";
+import { useKpis, useAppointments, useDoctors } from "@/lib/queries";
+import { LiveBadge } from "@/components/dashboard/live-badge";
 import { StatusBadge } from "@/components/dashboard/data-table";
 
 export default function HospitalOverviewPage() {
-  const kpis = mockHospitalKPIs;
-  const hospitalAppointments = mockAppointments.filter(a => a.hospital_id === "h1");
-  const hospitalDoctors = mockDoctors.filter(d => d.hospital_id === "h1");
+  const { data: kpis, isLive: kpisLive, isLoading: kpisLoading } = useKpis();
+  const { data: appointments, isLive: apptLive, isLoading: apptLoading } = useAppointments();
+  const { data: doctors, isLive: docLive, isLoading: docLoading } = useDoctors();
+
+  const hospitalAppointments = appointments.filter((a: any) => a.hospital_id === "h1");
+  const hospitalDoctors = doctors.filter((d: any) => d.hospital_id === "h1");
+
+  const isLive = kpisLive && apptLive && docLive;
+  const isLoading = kpisLoading || apptLoading || docLoading;
 
   return (
     <DashboardShell navItems={HOSPITAL_NAV} sidebarTitle="City General Hospital" sidebarSubtitle="Hospital Admin" pageTitle="Hospital Overview" pageSubtitle="Your hospital at a glance">
+      <div className="mb-6"><LiveBadge live={isLive} loading={isLoading} /></div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-8">
-        <StatCard title="Appointments Today" value={kpis.appointments_today} icon="CalendarCheck" color="blue" trend={{ value: 12, label: "vs yesterday" }} />
-        <StatCard title="Active Doctors" value={kpis.active_doctors} icon="Stethoscope" color="teal" />
-        <StatCard title="Available Slots" value={kpis.available_slots} icon="Clock" color="emerald" />
-        <StatCard title="AI Bookings" value={kpis.ai_bookings} icon="Bot" color="purple" trend={{ value: 18, label: "this week" }} />
-        <StatCard title="Cancelled" value={kpis.cancelled_appointments} icon="XCircle" color="rose" />
-        <StatCard title="Rescheduled" value={kpis.rescheduled_appointments} icon="RefreshCw" color="amber" />
-        <StatCard title="Questionnaire %" value={`${kpis.questionnaire_completion}%`} icon="ClipboardList" color="purple" />
-        <StatCard title="EHR Success" value={`${kpis.ehr_success_rate}%`} icon="Link2" color="emerald" />
+        <StatCard title="Appointments Today" value={kpis.total_appointments_today || 0} icon="CalendarCheck" color="blue" trend={{ value: 12, label: "vs yesterday" }} />
+        <StatCard title="Total Appointments" value={kpis.total_appointments || 0} icon="Stethoscope" color="teal" />
+        <StatCard title="Completed" value={kpis.completed || 0} icon="Clock" color="emerald" />
+        <StatCard title="AI Conversations" value={kpis.active_ai_conversations || 0} icon="Bot" color="purple" trend={{ value: 18, label: "this week" }} />
+        <StatCard title="Cancelled" value={kpis.cancelled || 0} icon="XCircle" color="rose" />
+        <StatCard title="Booked" value={kpis.booked || 0} icon="RefreshCw" color="amber" />
+        <StatCard title="Total Users" value={kpis.total_users || 0} icon="User" color="purple" />
+        <StatCard title="Total Hospitals" value={kpis.total_hospitals || 0} icon="Link2" color="emerald" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

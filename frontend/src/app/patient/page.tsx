@@ -2,15 +2,22 @@
 import React from "react";
 import { DashboardShell } from "@/components/dashboard/shell";
 import { PATIENT_NAV } from "@/lib/constants";
-import { mockAppointments, mockDoctors } from "@/lib/mock-data";
+import { useAppointments, useDoctors } from "@/lib/queries";
+import { LiveBadge } from "@/components/dashboard/live-badge";
 import { CalendarCheck, Clock, User, Heart, Sparkles, ArrowRight, ShieldCheck, Video, MapPin, Activity } from "lucide-react";
 import Link from "next/link";
 
 export default function PatientOverviewPage() {
-  const patientAppointments = mockAppointments.filter(
-    (a) => a.status === "confirmed" || a.status === "pending"
+  const { data: appointments, isLive: apptLive, isLoading: apptLoading } = useAppointments();
+  const { data: doctors, isLive: docLive, isLoading: docLoading } = useDoctors();
+
+  const patientAppointments = appointments.filter(
+    (a: any) => a.status === "confirmed" || a.status === "pending"
   );
   const nextAppt = patientAppointments[0];
+  
+  const isLive = apptLive && docLive;
+  const isLoading = apptLoading || docLoading;
 
   return (
     <DashboardShell
@@ -20,6 +27,7 @@ export default function PatientOverviewPage() {
       sidebarSubtitle="Health & Appointments"
     >
       <div className="space-y-8">
+        <div className="mb-4"><LiveBadge live={isLive} loading={isLoading} /></div>
         {/* Welcome Hero Banner */}
         <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 p-8 text-white shadow-xl">
           <div className="relative z-10 max-w-2xl">
@@ -108,7 +116,7 @@ export default function PatientOverviewPage() {
               <span className="text-xs text-muted-foreground">Top Rated in Network</span>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {mockDoctors.slice(0, 4).map((doc) => (
+              {doctors.slice(0, 4).map((doc: any) => (
                 <div
                   key={doc.id}
                   className="rounded-2xl border border-border bg-card p-5 hover:border-primary/50 transition-all hover:shadow-md flex flex-col justify-between"
