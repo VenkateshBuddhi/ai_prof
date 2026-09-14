@@ -34,14 +34,28 @@ from src.api.routers import appointments, catalog, ops, patients, voice  # noqa:
 app = FastAPI(title="ai-prof API", version="0.1.0",
               description="REST layer over Medplum + workflows + eval (dev-bypass auth).")
 
-# CORS for the Next.js frontend (comma-separated origins, default localhost:3000).
-_origins = os.environ.get("FRONTEND_ORIGIN", "http://localhost:3000").split(",")
+# CORS setup: allow local dev, any Vercel preview/production deployments, and custom env origins
+_origins_env = os.environ.get("FRONTEND_ORIGIN", "")
+_allowed_origins = [o.strip() for o in _origins_env.split(",") if o.strip()]
+_default_origins = [
+    "http://localhost:3000",
+    "http://localhost:3001",
+    "http://127.0.0.1:3000",
+    "http://127.0.0.1:3001",
+    "https://ai-prof-eight.vercel.app",
+]
+for origin in _default_origins:
+    if origin not in _allowed_origins:
+        _allowed_origins.append(origin)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[o.strip() for o in _origins],
+    allow_origins=_allowed_origins,
+    allow_origin_regex=r"^https://.*\.vercel\.app$",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 
