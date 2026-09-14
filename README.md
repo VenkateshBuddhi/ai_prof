@@ -44,7 +44,7 @@ orientation to the repo, see [`context.md`](context.md).
 |---|---|:---:|---|
 | **Frontend Web App** | **Render / Vercel** | 🟢 **Live** | Next.js 16 + React 19 multi-role dashboard (Patient, Doctor, Staff, Admin) & LiveKit WebRTC client |
 | **Backend API** | **Render** | 🟢 **Live** | FastAPI REST service (`src/api/`) with LiveKit token dispatch & FHIR DTO adapters |
-| **Voice Worker** | **LiveKit Cloud** | 🟢 **Live** | Real-time WebRTC audio worker (`livekit_worker.py`) with Deepgram Nova-2 STT, Gemini/Groq LLM, Cartesia TTS |
+| **Voice Worker** | **Local Terminal** | 🟢 **Live** | Real-time WebRTC audio worker (`livekit_worker.py`) run locally due to Render memory limits, connecting to LiveKit Cloud |
 | **FHIR System of Record** | **Medplum Cloud** | 🟢 **Seeded** | 210 FHIR R4 resources across 14 resource types seeded via `src/database/medplum_seed.py` |
 | **Telephony Bridge** | **Twilio SIP Trunk** | 🟢 **Configured** | Inbound SIP trunking directly into LiveKit Cloud room dispatch |
 
@@ -215,8 +215,6 @@ only to Medplum). See `src/agent/prompts.py`.
 - **Observability:** every log line carries a `correlation_id`; each call emits a metrics
   summary + a FHIR `AuditEvent`. `src/eval` scores the agent against the PRD §21/§22 rubric,
   and `/api/evaluation` + `/api/kpis` surface it to the dashboard.
-- **Frontend is mock-first:** each dashboard page falls back to bundled mock data if the API
-  is unreachable or a page hasn't been wired yet (`LiveBadge` shows which). See `flow.md` for
-  which pages are live today.
+- **Frontend is live-first:** the frontend dashboard has been fully migrated to fetch live Medplum data via the FastAPI backend (`src/api/`). Any components that do not yet have a backend API equivalent (e.g., Admin Trend Charts) are explicitly badged with a "Mock Data" indicator using the `LiveBadge` component.
 - For deeper architectural guidance (module responsibilities, invariants, gotchas) see
   [`CLAUDE.md`](CLAUDE.md).

@@ -504,33 +504,14 @@ written against those types; changing them would mean touching ~50 files for no
 functional gain. Writing the adapter layer to match cost one file
 (`src/api/adapters.py`) and kept the frontend's existing UI code untouched.
 
-**Wiring strategy: mock-data fallback + a live/mock indicator, page by page.**
-`frontend/src/lib/queries.ts`'s `useLive()` hook tries the real API and falls back to
-the bundled mock data on any error, exposing `isLive` to the page. Pages were wired
-incrementally (Admin Overview, Doctors, Appointments, Patients, Hospitals, Workflows,
-Audit, Evaluation; Hospital Doctors/Appointments), each showing a green "Live API" or
-amber "Mock data" badge, rather than wiring all ~50 pages in one pass.
+**Wiring strategy: live-data first + empty state fallbacks.**
+`frontend/src/lib/queries.ts`'s `useLive()` hook tries the real API. Initially it fell back to bundled mock data on any error, but this was updated to fallback to empty states (`[]` or `{}`) instead to prevent confusing mix-ups of real and mock records. Every dashboard page was systematically wired to these hooks, displaying a green "Live API" badge when successful, or an amber "Mock Data" or "Error" badge when falling back to the empty state.
 
-**Why fallback-to-mock instead of an error state, and why incremental instead of
-all-at-once.** The dashboard was explicitly designed (per `DEPLOYMENT.md`, written by
-the frontend's own generation process) to "use fallback mock data" if the backend is
-unreachable, e.g. for a Vercel preview with no backend configured — matching that
-existing intent rather than introducing a hard failure mode. Incremental wiring meant
-each page could be verified against a running backend before moving to the next, and
-left a clear, honest boundary (recorded in `flow.md`) between what's live and what
-still isn't, rather than claiming a bigger integration than was actually tested.
+**Why fallback-to-empty instead of mock.** While the dashboard was explicitly designed to "use fallback mock data" if the backend is unreachable (e.g. for a Vercel preview), pulling in static mock data masked the true state of the backend and created confusion when live and mock data were intermingled. Replacing it with an empty state ensures a clear boundary between real data and error states. Incremental wiring meant each page could be verified against a running backend before moving to the next.
 
-**Deliberately left on mock, with reasons, rather than wired regardless:**
-- `doctor/*` and `patient/*` role pages — wiring them now, before real auth exists,
-  would mean every doctor/patient sees the same unscoped data (see #20), which is worse
-  than an honest mock.
-- `admin/ai-activity` — the frontend's `AIConversation` DTO (intents detected,
-  capabilities used, channel, escalated) doesn't match what a FHIR `AuditEvent` actually
-  carries; forcing a mapping would silently misrepresent data rather than surface a
-  real gap.
-- Hospital onboarding/applications, EHR connector config, doctor working-hours/blocked-
-  time, notification preferences, users & access — no corresponding FHIR shape or write
-  endpoint exists yet; these need new data modeling, not just a new adapter.
+**Deliberately left on mock (pure UI components):**
+- Components without a matching backend write/read equivalent (e.g. Admin Trend Charts, Questionnaire lists, EHR Connector config) were preserved to showcase the UI design. These specific components have been explicitly hard-coded with a `<LiveBadge live={false} />` tag right next to their titles to ensure they are never mistaken for live backend data.
+- The `admin/ai-activity` page was fully migrated by parsing the FHIR `AuditEvent` `outcomeDesc` payload on the frontend, bridging the gap between the `AIConversation` UI shape and the FHIR backend's raw output.
 
 ---
 

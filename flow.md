@@ -385,17 +385,10 @@ FastAPI: src/api/routers/ops.py -> kpis(scope: Scope = Depends(get_scope))
 5. The JSON response flows back through react-query; `useLive()`
    (`frontend/src/lib/queries.ts`) marks the result `isLive: true` and the page renders
    real data with a green "Live API" badge (`live-badge.tsx`). If the request fails for
-   any reason (backend down, `503`, network error), `useLive()` silently falls back to
-   the page's bundled `mockData` and shows the amber "Mock data" badge instead — the
-   page never shows an error state to the user.
+   any reason (backend down, `503`, network error), `useLive()` falls back to
+   an empty state (`[]` or `{}`) rather than fake data, preventing confusing mix-ups of real and mock records. It then shows an amber "Mock Data" or "Error" badge.
 
-**Which pages are actually wired this way today** (see `decisions.md` #19 for why the
-rest aren't yet): Admin Overview (KPI tiles only — trend charts stay mock), Doctors,
-Appointments, Patients, Hospitals, Workflows, Audit Logs, Evaluation; Hospital Doctors
-and Appointments. Every other dashboard page — all of `doctor/*` and `patient/*`
-(pending real auth/scope), `admin/ai-activity` (pending a matching data shape), hospital
-onboarding/EHR-config/staff/questionnaire-builder pages (pending new FHIR modeling and
-write endpoints) — renders its original bundled mock data, unchanged.
+**Which pages are actually wired this way today:** Every dashboard page (Admin, Hospital, Doctor, Patient) is fully wired to live Medplum data via `src/api`. Only a handful of pure UI components (like the Admin Trend Charts, Questionnaires list, and EHR Integrations) still render static data because their corresponding backend endpoints do not exist yet. These components are explicitly badged with a hardcoded `<LiveBadge live={false} />` to distinguish them from live tables.
 
 ---
 
