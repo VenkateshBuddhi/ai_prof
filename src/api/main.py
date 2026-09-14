@@ -59,10 +59,11 @@ app.add_middleware(
 )
 
 
+@app.get("/")
 @app.get("/api/health")
 async def health():
     from src.database.medplum_client import get_medplum_client
-    return {"status": "ok", "ehr_configured": get_medplum_client() is not None}
+    return {"status": "ok", "service": "ai-prof API", "ehr_configured": get_medplum_client() is not None}
 
 
 for r in (catalog, appointments, patients, ops, voice):
