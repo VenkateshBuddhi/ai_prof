@@ -1,5 +1,5 @@
 services:
-  # 1. FastAPI Python Backend Web Service
+  # FastAPI Python Backend Web Service
   - type: web
     name: ai-prof-backend
     env: python
@@ -30,26 +30,4 @@ services:
       - key: GROQ_API_KEY
         sync: false
       - key: GOOGLE_API_KEY
-        sync: false
-
-  # 2. Next.js Frontend Web Service
-  - type: web
-    name: ai-prof-frontend
-    env: node
-    region: oregon
-    plan: free
-    rootDir: frontend
-    buildCommand: "npm install && npm run build"
-    startCommand: "npm run start"
-    envVars:
-      - key: NODE_VERSION
-        value: 20.11.0
-      - key: NEXT_PUBLIC_API_URL
-        fromService:
-          type: web
-          name: ai-prof-backend
-          property: host
-      - key: NEXT_PUBLIC_SUPABASE_URL
-        sync: false
-      - key: NEXT_PUBLIC_SUPABASE_ANON_KEY
         sync: false
