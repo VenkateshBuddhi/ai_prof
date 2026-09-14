@@ -1,6 +1,21 @@
 # Environment files
 .env
 .env.*
+!.env.example
+
+# Frontend / Node.js
+node_modules/
+frontend/node_modules/
+.next/
+frontend/.next/
+out/
+frontend/out/
+.vercel/
+frontend/.vercel/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
 
 # Python-generated files
 __pycache__/
