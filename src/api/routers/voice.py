@@ -1,4 +1,6 @@
 # src/api/routers/voice.py — mint a LiveKit token so the browser can talk to the agent
+import asyncio
+import logging
 import os
 import uuid
 from typing import Optional
@@ -7,6 +9,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 router = APIRouter(prefix="/api/voice", tags=["voice"])
+logger = logging.getLogger("VoiceAPI")
 
 
 class TokenBody(BaseModel):
@@ -24,9 +27,8 @@ async def voice_token(body: TokenBody):
     key = os.environ.get("LIVEKIT_API_KEY")
     secret = os.environ.get("LIVEKIT_API_SECRET")
     if not (url and key and secret):
-        raise HTTPException(503, "LiveKit not configured")
+        raise HTTPException(503, "LiveKit credentials not configured in environment")
 
-    import logging
     from livekit import api as lk
 
     identity = body.identity or f"web-{uuid.uuid4().hex[:8]}"
@@ -40,16 +42,23 @@ async def voice_token(body: TokenBody):
     )
 
     # Dispatch the agent into this room so the browser caller is answered.
-    # Best-effort: if the worker isn't registered, the room still opens.
+    # LiveKit REST API requires HTTP(S) protocol rather than WSS.
     agent_name = os.environ.get("LIVEKIT_AGENT_NAME", "healthcare-intake")
-    lkapi = lk.LiveKitAPI(url, key, secret)
+    http_url = url.replace("wss://", "https://").replace("ws://", "http://")
+    
     try:
-        await lkapi.agent_dispatch.create_dispatch(
-            lk.CreateAgentDispatchRequest(agent_name=agent_name, room=room)
-        )
+        lkapi = lk.LiveKitAPI(http_url, key, secret)
+        try:
+            await asyncio.wait_for(
+                lkapi.agent_dispatch.create_dispatch(
+                    lk.CreateAgentDispatchRequest(agent_name=agent_name, room=room)
+                ),
+                timeout=2.5,
+            )
+            logger.info("Agent dispatch created for room=%s agent=%s", room, agent_name)
+        finally:
+            await lkapi.aclose()
     except Exception as e:  # noqa: BLE001
-        logging.getLogger("VoiceAPI").warning("agent dispatch failed: %s", type(e).__name__)
-    finally:
-        await lkapi.aclose()
+        logger.warning("agent dispatch optional warning: %s (%s)", type(e).__name__, str(e))
 
     return {"url": url, "token": token, "room": room, "identity": identity, "agent": agent_name}
