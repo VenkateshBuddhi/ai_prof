@@ -352,10 +352,22 @@ async def entrypoint(ctx: JobContext) -> None:
             asyncio.create_task(_do_hangup())
 
     # --- Go live -------------------------------------------------------------
+    from livekit.agents import room_io  # local import: keeps top-level stable
+
+    opts = {}
+    RoomOptions = getattr(room_io, "RoomOptions", None)
+    # RoomOptions only exists in newer livekit-agents; the old
+    # room_input_options path is deprecated but still honoured by this SDK.
+    if RoomOptions is not None:
+        opts["room_options"] = RoomOptions()
+    else:  # pragma: no cover - legacy SDK path
+        from livekit.agents import RoomInputOptions  # noqa: PLC0415
+
+        opts["room_input_options"] = RoomInputOptions()
     await session.start(
         agent=agent,
         room=ctx.room,
-        room_options=rtc.RoomOptions(),
+        **opts,  # type: ignore[arg-type]
     )
     # Speak the greeting produced by the brain (barge-in enabled).
     await session.say(greeting, allow_interruptions=True)
