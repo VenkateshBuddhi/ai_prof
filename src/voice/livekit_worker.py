@@ -33,6 +33,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+import socket
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
@@ -43,7 +44,6 @@ from livekit.agents import (
     ConversationItemAddedEvent,
     JobContext,
     JobProcess,
-    RoomInputOptions,
     WorkerOptions,
     cli,
     llm as lk_llm,
@@ -194,8 +194,29 @@ class HealthcareIntakeAgent(Agent):
 # Worker lifecycle
 # ---------------------------------------------------------------------------
 def prewarm(proc: JobProcess) -> None:
-    """Load the Silero VAD once per worker process (reused across calls)."""
+    """Warm everything a call needs up-front, so nothing heavy blocks the audio path."""
+    # VAD is reused across calls.
     proc.userdata["vad"] = silero.VAD.load()
+    # Import the heavy LLM/provider modules NOW (protobuf, google-genai, groq):
+    # importing them inside the first LLM turn stalls the event loop ~700ms and
+    # delays the greeting the caller hears.
+    try:
+        from src.agent import graph as _graph  # noqa: F401
+
+        providers = []
+        if os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY"):
+            from langchain_google_genai import ChatGoogleGenerativeAI  # noqa: F401
+
+            providers.append("gemini")
+        if os.environ.get("GROQ_API_KEY"):
+            from langchain_groq import ChatGroq  # noqa: F401
+
+            providers.append("groq")
+        logger.info("Prewarmed LLM providers: %s", ", ".join(providers) or "none configured")
+    except Exception:  # noqa: BLE001
+        # Prewarm must never kill the worker: the entrypoint fails loudly with a
+        # clear message if no LLM is actually configured.
+        logger.warning("LLM prewarm skipped (will try again per call).")
 
 
 def _extract_caller_number(participant: rtc.RemoteParticipant) -> Optional[str]:
@@ -334,7 +355,7 @@ async def entrypoint(ctx: JobContext) -> None:
     await session.start(
         agent=agent,
         room=ctx.room,
-        room_input_options=RoomInputOptions(),
+        room_options=RoomOptions(),
     )
     # Speak the greeting produced by the brain (barge-in enabled).
     await session.say(greeting, allow_interruptions=True)
@@ -344,6 +365,62 @@ def _format_transcript(turns: List[Dict[str, str]]) -> str:
     speaker = {"user": "Patient", "assistant": "Assistant"}
     lines = [f"{speaker.get(t['role'], t['role'])}: {t['text']}" for t in turns]
     return "\n".join(lines)
+
+
+WORKER_PORT_ENV = "LIVEKIT_WORKER_PORT"
+DEFAULT_WORKER_PORT = 8081
+
+
+def _port_is_free(port: int) -> bool:
+    """True when nothing else is bound to ``port`` on this machine.
+
+    Mirrors the worker's own bind semantics closely enough to catch the
+    "another worker is already running" case before LiveKit's CLI aborts.
+    """
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        # Windows: without SO_EXCLUSIVEADDRUSE a bind can succeed on a port a
+        # second process still holds, hiding the conflict this check looks for.
+        if hasattr(socket, "SO_EXCLUSIVEADDRUSE"):
+            sock.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
+        sock.bind(("", port))
+        return True
+    except OSError:
+        return False
+    finally:
+        sock.close()
+
+
+def resolve_worker_port(default: int = DEFAULT_WORKER_PORT) -> int:
+    """Pick the worker's HTTP port, failing loudly instead of silently.
+
+    The LiveKit worker serves health/token endpoints on ``options.port``
+    (8081). Starting a second worker without stopping the first aborts with
+    ``OSError: [Errno 10048] error while attempting to bind on address
+    ('::', 8081)`` and *no visible output* — which looks exactly like a blank,
+    hung worker while calls fail with no agent to answer.
+
+    ``LIVEKIT_WORKER_PORT`` overrides the port (needed to run a second worker,
+    e.g. one for SIP and one for the browser playground on the same machine).
+    """
+    raw = os.environ.get(WORKER_PORT_ENV, "").strip()
+    port = default
+    if raw:
+        try:
+            port = int(raw)
+        except ValueError:
+            raise SystemExit(f"{WORKER_PORT_ENV}={raw!r} is not a port number.")
+        if not 1 <= port <= 65535:
+            raise SystemExit(f"{WORKER_PORT_ENV}={port} is out of range (1-65535).")
+    if _port_is_free(port):
+        return port
+    raise SystemExit(
+        f"Port {port} is already in use, so the worker cannot start.\n"
+        "  Another LiveKit worker (or an unrelated app) is holding it. Fix it with either:\n"
+        "    * stop the other process, e.g.  Get-Process python | Stop-Process -Force\n"
+        f"    * or start this worker on a free port:  $env:{WORKER_PORT_ENV}='8082'\n"
+        f"      (PowerShell;  set {WORKER_PORT_ENV}=8082  in cmd.exe)"
+    )
 
 
 if __name__ == "__main__":
@@ -360,4 +437,13 @@ if __name__ == "__main__":
     agent_name = os.environ.get("LIVEKIT_AGENT_NAME", "healthcare-intake")
     if agent_name:
         options.agent_name = agent_name
+    # Bind the worker's HTTP port up front: a port conflict otherwise aborts with
+    # an OSError and no visible output (a second worker still running looks like
+    # a blank terminal). See resolve_worker_port for the override.
+    options.port = resolve_worker_port()
+    logger.info(
+        "Starting LiveKit worker on port %s (agent_name=%r)",
+        options.port,
+        agent_name or "<auto-dispatch>",
+    )
     cli.run_app(options)
