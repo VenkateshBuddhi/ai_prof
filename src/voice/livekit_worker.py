@@ -355,7 +355,7 @@ async def entrypoint(ctx: JobContext) -> None:
     await session.start(
         agent=agent,
         room=ctx.room,
-        room_options=RoomOptions(),
+        room_options=rtc.RoomOptions(),
     )
     # Speak the greeting produced by the brain (barge-in enabled).
     await session.say(greeting, allow_interruptions=True)
